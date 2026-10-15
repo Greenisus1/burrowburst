@@ -4,7 +4,7 @@ import curses,json,os,random,time
 from collections import deque
 from pathlib import Path
 from ui import put,run
-VERSION='1.0.0'
+VERSION='1.1.0'
 RECORD=Path.home()/'.local/share/burrowburst/best.json'
 DIRS=((0,-1),(1,0),(0,1),(-1,0))
 class Game:
@@ -109,17 +109,40 @@ def save(score):
   with os.fdopen(fd,'w') as f:json.dump({'best':max(best(),score)},f)
   tmp.replace(RECORD);return True
  except (OSError,ValueError):return False
+def setup_colors():
+ if not curses.has_colors():return False
+ curses.start_color();curses.use_default_colors()
+ # The first six preserve familiar role indices; 256-color terminals get layered earth.
+ basic=[(3,-1),(6,-1),(5,-1),(1,-1),(2,-1),(7,-1),(3,-1),(7,-1),(7,-1),(2,-1),(5,-1),(1,-1)]
+ rich=[(180,94),(51,17),(175,53),(174,52),(118,17),(231,17),(220,17),(153,17),(110,17),(118,17),(213,17),(208,17)]
+ for i,(fg,bg) in enumerate(rich if curses.COLORS>=256 else basic,1):curses.init_pair(i,fg,bg)
+ return True
+
+EMOJI={'player':'👷','rock':'🪨','warning':'⚠','fall':'💥','ghost':'👻','enemies':('👾','🐛','🦇')}
+def display_width(text):
+ import unicodedata
+ return sum(0 if unicodedata.combining(c) else 2 if unicodedata.east_asian_width(c) in ('W','F') else 1 for c in text)
+def pad_cell(text,width):
+ out='';used=0
+ for c in text:
+  n=display_width(c)
+  if used+n>width:break
+  out+=c;used+=n
+ return out+' '*(width-used)
+def default_emoji():
+ import locale
+ return 'UTF-8' in locale.getpreferredencoding(False).upper() and os.environ.get('TERM','')!='linux' and '--ascii' not in __import__('sys').argv
+
 def play(s):
- s.timeout(25);g=Game();last=time.monotonic();paused=False;recorded=False;high=best();note=''
- if curses.has_colors():
-  curses.start_color();curses.use_default_colors()
-  for i,c in enumerate((curses.COLOR_YELLOW,curses.COLOR_CYAN,curses.COLOR_MAGENTA,curses.COLOR_RED,curses.COLOR_GREEN,curses.COLOR_WHITE),1):curses.init_pair(i,c,-1)
- def color(i):return curses.color_pair(i) if curses.has_colors() else 0
+ s.timeout(25);g=Game();last=time.monotonic();paused=False;recorded=False;high=best();note='';emoji=default_emoji()
+ palette=setup_colors()
+ def color(i):return curses.color_pair(i) if palette else 0
  while True:
   key=s.getch();now=time.monotonic();dt=now-last;last=now;h,w=s.getmaxyx();s.erase()
   if key in (27,ord('q'),ord('Q')):return
   if key in (ord('r'),ord('R')):g=Game();paused=False;recorded=False;note=''
   if key in (ord('p'),ord('P')):paused=not paused
+  if key in (ord('e'),ord('E')):emoji=not emoji
   if h<26 or w<70:put(s,1,1,'Resize to 70x26 or larger. Game paused. Q quits.');s.refresh();continue
   if not paused and not g.over:
    mapping={curses.KEY_UP:0,curses.KEY_RIGHT:1,curses.KEY_DOWN:2,curses.KEY_LEFT:3,ord('w'):0,ord('d'):1,ord('s'):2,ord('a'):3,ord('W'):0,ord('D'):1,ord('S'):2,ord('A'):3}
@@ -127,22 +150,33 @@ def play(s):
    if key==ord(' '):g.pump()
    g.tick(dt)
   if g.over and not recorded:note='Best saved.' if save(g.score) else 'Could not save best.';recorded=True;high=max(high,best())
-  put(s,0,2,'BURROWBURST | STAGE '+str(g.level)+' | SCORE '+str(g.score)+' | LIVES '+str(g.lives)+' | BEST '+str(high),color(2)|curses.A_BOLD)
-  put(s,1,2,'PAUSED' if paused else g.message,color(5))
-  cw=max(2,(w-4)//g.W);ch=max(1,(h-7)//g.H);ox=(w-cw*g.W)//2;oy=3
-  def tile(p,text,attr):
-   x,y=p
-   for yy in range(y*(h-7)//g.H,(y+1)*(h-7)//g.H):put(s,oy+yy,ox+x*cw,text.ljust(cw)[:cw],attr)
+  put(s,0,2,'BURROWBURST  |  STAGE '+str(g.level)+'  |  SCORE '+str(g.score)+'  |  LIVES '+str(g.lives),color(7)|curses.A_BOLD)
+  put(s,1,2,('PAUSED  |  ' if paused else '')+(g.message if not paused else 'P to resume')+'  |  BEST '+str(high),color(8))
+  cw=max(2,(w-4)//g.W);ox=(w-cw*g.W)//2;oy=3;bh=h-7
+  def tile(p,text,attr,sprite=False):
+   x,y=p;top=y*bh//g.H;bottom=(y+1)*bh//g.H
+   for yy in range(top,bottom):
+    content=pad_cell(text,cw) if not sprite or yy==top+(bottom-top-1)//2 else ' '*cw
+    put(s,oy+yy,ox+x*cw,content,attr)
   for y in range(g.H):
-   for x in range(g.W):tile((x,y),'░'*cw if (x,y) in g.dirt else ' '*cw,color(1) if y<7 else color(3) if y<13 else color(4))
+   for x in range(g.W):tile((x,y),('·' if emoji else '.')*cw if (x,y) in g.dirt else ' '*cw,color(1 if y<7 else 3 if y<13 else 4) if (x,y) in g.dirt else color(9))
   for r in g.rocks:
-   if not r['dead']:tile(r['p'],'##' if r['fall'] else '><' if r['wait'] else '[]',color(6)|curses.A_BOLD)
-  for p,t in g.fx:tile(p,'--' if g.face%2 else '||',color(5)|curses.A_BOLD)
-  for e in g.enemies:tile(e['p'],str(e['inflate'])*2 if e['inflate'] else 'oo' if e['ghost'] else ('xx','vv','zz')[e['kind']],color(6) if e['ghost'] else color(5)|curses.A_BOLD)
-  tile(g.p,('^^','>>','vv','<<')[g.face],color(2)|curses.A_BOLD)
-  put(s,h-3,2,'Arrows/WASD dig | Space pump (4 taps pop) | P pause | R restart | Q quit')
-  put(s,h-2,2,'[] rock: dig below, move away! >< warns before falling. Ghosts cross dirt.',color(1))
-  put(s,h-1,2,note or 'Clear all creatures to reach the next stage. Original offline arcade.',color(2));s.refresh()
+   if not r['dead']:
+    sprite=EMOJI['fall' if r['fall'] else 'warning' if r['wait'] else 'rock'] if emoji else '##' if r['fall'] else '><' if r['wait'] else '[]'
+    tile(r['p'],sprite,color(6),True)
+  for p,t in g.fx:tile(p,('━━' if g.face%2 else '┃ ') if emoji else ('--' if g.face%2 else '||'),color(5)|curses.A_BOLD,True)
+  for e in g.enemies:
+   sprite=(str(e['inflate'])+'○' if emoji else str(e['inflate'])*2) if e['inflate'] else (EMOJI['ghost'] if e['ghost'] else EMOJI['enemies'][e['kind']]) if emoji else 'oo' if e['ghost'] else ('xx','vv','zz')[e['kind']]
+   tile(e['p'],sprite,color(10+e['kind']),True)
+  # Helmet, human face and a facing arrow, rather than an anonymous direction marker.
+  px,py=g.p;top=py*bh//g.H;bottom=(py+1)*bh//g.H
+  tile(g.p,EMOJI['player'] if emoji else '@'+('^','>','v','<')[g.face],color(2)|curses.A_BOLD,True)
+  if emoji and cw>=3:
+   put(s,oy+top+(bottom-top-1)//2,ox+px*cw+2,('↑','→','↓','←')[g.face],color(2)|curses.A_BOLD)
+  if bottom-top>=2:put(s,oy+top,ox+px*cw,('▰ ' if emoji else '=='),color(7)|curses.A_BOLD)
+  put(s,h-3,2,'Arrows/WASD dig | Space pump | P pause | R restart | Q quit',color(8))
+  put(s,h-2,2,'E sprites: '+('EMOJI' if emoji else 'ASCII')+' | Rocks warn, then fall. Pump 4 times. Ghosts cross dirt.',color(8))
+  put(s,h-1,2,note or 'Dig deep. Keep your helmet on. Clear every creature to advance.',color(7));s.refresh()
 if __name__=='__main__':
  import sys
  if '--version' in sys.argv:print(VERSION)
