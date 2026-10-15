@@ -41,4 +41,12 @@ class GameTests(unittest.TestCase):
  def test_symlink(self):
   with tempfile.TemporaryDirectory() as d,patch.object(b,'RECORD',Path(d)/'r.json'):
    b.RECORD.symlink_to(Path(d)/'outside');self.assertFalse(b.save(2))
+class SpriteTests(unittest.TestCase):
+ def test_width(self):
+  self.assertEqual(b.display_width('🧑'),2)
+  self.assertEqual(b.display_width(b.pad_cell('🧑',3)),3)
+ def test_clip(self):
+  self.assertEqual(b.pad_cell('🧑',1),' ')
+ def test_ascii(self):
+  self.assertEqual(b.pad_cell('@>',3),'@> ')
 if __name__=='__main__':unittest.main()
