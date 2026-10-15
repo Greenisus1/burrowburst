@@ -3,14 +3,14 @@ import os,pty,subprocess,fcntl,termios,struct,time,select
 
 def main():
  m,s=pty.openpty();fcntl.ioctl(s,termios.TIOCSWINSZ,struct.pack('HHHH',32,110,0,0));before=termios.tcgetattr(s)
- p=subprocess.Popen(['python3','burrowburst.py'],stdin=s,stdout=s,stderr=s,env=dict(os.environ,TERM='xterm-256color',LANG='C.UTF-8'));out=b''
+ p=subprocess.Popen(['python3','burrowburst.py']+(['--ascii'] if os.environ.get('BB_ASCII') else []),stdin=s,stdout=s,stderr=s,env=dict(os.environ,TERM='xterm-256color',LANG='C.UTF-8'));out=b''
  def collect(sec):
   nonlocal out
   end=time.monotonic()+sec
   while time.monotonic()<end:
    if select.select([m],[],[],.02)[0]:out+=os.read(m,65536)
  collect(.2)
- for key in [b'\x1bOB',b'\x1bOC',b' ',b'P',b'W',b'P',b'R']:os.write(m,key);collect(.1)
+ for key in [b'\x1bOB',b'\x1bOC',b' ',b'P',b'W',b'P',b'E',b'e',b'R']:os.write(m,key);collect(.1)
  fcntl.ioctl(s,termios.TIOCSWINSZ,struct.pack('HHHH',20,60,0,0));os.kill(p.pid,28);collect(.1)
  assert b'Resize to 70x26' in out
  fcntl.ioctl(s,termios.TIOCSWINSZ,struct.pack('HHHH',32,110,0,0));os.kill(p.pid,28);collect(.1);os.write(m,b'P');collect(.1)
