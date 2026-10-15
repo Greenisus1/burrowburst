@@ -36,7 +36,7 @@ E toggles emoji/ASCII at any time; use `python3 burrowburst.py --ascii` to start
 
 Test evidence: 18 local unit tests, separate real-PTY emoji/ASCII runs with E/e toggle, resize, pause/restart and uppercase Q restore checks. Host rendering previews use Noto Color Emoji; actual Pi/Mac client fonts may differ. The release passed 18 tests and both emoji/ASCII PTY checks on a real aarch64 Raspberry Pi before publication.
 
-## 1.2.0 custom pixel mode
+## 1.2.0 custom pixel preview (not published)
 
 Custom hand-authored 8x8 sprites: white/blue helmeted digger with pump, red goggle creatures, green dragon-like creatures, ghosts and rocks. No copied game art, no font downloads and no terminal graphics protocol. The green creature is visual only: fire-breathing is still not implemented.
 
@@ -44,4 +44,10 @@ A truecolor terminal (`COLORTERM=truecolor` or `24bit`, or a direct-color TERM) 
 
 Modern SSH clients often render this well, but SSH alone does not guarantee 24-bit color or Unicode half blocks. If forced pixel mode looks wrong, E restores the fallback. No change to terminal fonts or configuration is made. Plain ASCII is the compatibility route for unsupported clients. Pixel frames are capped by an 80ms input wait to reduce terminal traffic; slow links may still feel sluggish.
 
-Tests: 24 unit tests plus real PTY truecolor, emoji and ASCII controls/resize/quit-restoration tests locally. All 24 unit tests and three display-mode PTY checks passed on a real aarch64 Raspberry Pi before publication.
+Tests: 24 unit tests plus real PTY truecolor, emoji and ASCII controls/resize/quit-restoration tests locally. Target Pi result pending. Public version stays 1.1.0 until approval.
+
+## 1.3.0 layout and flowers
+
+A top row now counts cleared stages with flowers (`*` in ASCII); the count is never inferred from a saved best score. A green snake/dragon is in stage 1. Stages 1-6 use tunnel/rock/creature placements measured from public arcade screenshots, adapted to this game's grid. Later stages are explicitly labeled repeats, not authentic arcade layouts. See LAYOUT_SOURCES.md for exact references, counts and limits. No original arcade assets are bundled. Enemy timing, scoring and fire behavior remain simplified.
+
+Local verification: 30 unit tests plus three real PTY display-mode tests. All 30 unit tests and three display-mode PTY tests passed on a real aarch64 Pi before publication.
