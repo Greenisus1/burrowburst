@@ -14,9 +14,11 @@ def main():
  fcntl.ioctl(s,termios.TIOCSWINSZ,struct.pack('HHHH',20,60,0,0));os.kill(p.pid,28);collect(.1)
  assert b'Resize to 70x26' in out
  fcntl.ioctl(s,termios.TIOCSWINSZ,struct.pack('HHHH',32,110,0,0));os.kill(p.pid,28);collect(.1);os.write(m,b'P');collect(.1)
+ if os.environ.get('BB_PIXEL'):os.write(m,b'V');collect(.1)
  with open('/tmp/burrowburst-terminal.ansi','wb') as f:f.write(out)
  os.write(m,b'Q');collect(.1);p.wait(timeout=3)
  assert p.returncode==0 and termios.tcgetattr(s)==before
+ if os.environ.get('COLORTERM')=='truecolor' and not os.environ.get('BB_ASCII'):assert b'38;2;' in out and b'48;2;' in out
  assert b'BURROWBURST' in out and b'PAUSED' in out
  os.close(m);os.close(s);print('PTY arrows/WASD/pump/pause/restart/resize/uppercase quit/terminal restoration PASS')
 if __name__=='__main__':main()
