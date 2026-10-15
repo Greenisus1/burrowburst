@@ -4,8 +4,8 @@ import curses,json,os,random,time
 from collections import deque
 from pathlib import Path
 from ui import put,run
-import pixelart,sys
-VERSION='1.2.0'
+import pixelart,sys,layouts
+VERSION='1.3.0'
 RECORD=Path.home()/'.local/share/burrowburst/best.json'
 DIRS=((0,-1),(1,0),(0,1),(-1,0))
 class Game:
@@ -13,14 +13,10 @@ class Game:
  def __init__(self,seed=None):
   self.rng=random.Random(seed);self.score=0;self.lives=3;self.level=0;self.over=False;self.timer=0;self.cool=0;self.invulnerable=0;self.fx=[];self.message='Dig tunnels. Face a creature and tap Space to pump!';self.new_level()
  def new_level(self):
-  self.level+=1;self.dirt={(x,y) for x in range(self.W) for y in range(1,self.H)};self.p=(self.W//2,1);self.face=2;self.enemies=[];self.rocks=[];self.fx=[]
-  for y in range(7):self.dirt.discard((self.W//2,y))
-  for i in range(min(10,3+self.level)):
-   x=4+(i%4)*7;y=7+(i//4)*4
-   for xx in range(x-1,x+2):self.dirt.discard((xx,y))
-   self.enemies.append(dict(p=(x,y),inflate=0,decay=0,kind=i%3,ghost=False))
-  for p in ((7,4),(24,5),(13,11),(27,14)):
-   self.dirt.discard(p);self.rocks.append(dict(p=p,wait=0,fall=False,dead=False,hits=0))
+  self.level+=1;opened,rocks,enemies,start=layouts.build(self.level)
+  self.dirt={(x,y) for x in range(self.W) for y in range(1,self.H)}-opened;self.p=start;self.face=2;self.fx=[]
+  self.enemies=[dict(p=p,inflate=0,decay=0,kind=kind,ghost=False) for p,kind in enemies]
+  self.rocks=[dict(p=p,wait=0,fall=False,dead=False,hits=0) for p in rocks]
   self.timer=0;self.cool=0;self.invulnerable=1.5
  def blocked(self,p):return any(r['p']==p and not r['dead'] for r in self.rocks)
  def move(self,d):
@@ -158,6 +154,7 @@ def play(s):
    g.tick(dt)
   if g.over and not recorded:note='Best saved.' if save(g.score) else 'Could not save best.';recorded=True;high=max(high,best())
   put(s,0,2,'BURROWBURST  |  STAGE '+str(g.level)+'  |  SCORE '+str(g.score)+'  |  LIVES '+str(g.lives),color(7)|curses.A_BOLD)
+  put(s,2,2,layouts.flowers(g.level-1,w,not emoji and not pixels)+' | '+layouts.label(g.level),color(7)|curses.A_BOLD)
   put(s,1,2,('PAUSED  |  ' if paused else '')+(g.message if not paused else 'P to resume')+'  |  BEST '+str(high),color(8))
   if not pixels:
    cw=max(2,(w-4)//g.W);ox=(w-cw*g.W)//2;oy=3;bh=h-7
@@ -174,7 +171,7 @@ def play(s):
      tile(r['p'],sprite,color(6),True)
    for p,t in g.fx:tile(p,('━━' if g.face%2 else '┃ ') if emoji else ('--' if g.face%2 else '||'),color(5)|curses.A_BOLD,True)
    for e in g.enemies:
-    sprite=(str(e['inflate'])+'○' if emoji else str(e['inflate'])*2) if e['inflate'] else (EMOJI['ghost'] if e['ghost'] else EMOJI['enemies'][e['kind']]) if emoji else 'oo' if e['ghost'] else ('xx','vv','zz')[e['kind']]
+    sprite=(str(e['inflate'])+'○' if emoji else str(e['inflate'])*2) if e['inflate'] else (EMOJI['ghost'] if e['ghost'] else ('🔴','🐉','🔴')[e['kind']]) if emoji else 'oo' if e['ghost'] else ('xx','vv','zz')[e['kind']]
     tile(e['p'],sprite,color(10+e['kind']),True)
    # Helmet, human face and a facing arrow, rather than an anonymous direction marker.
    px,py=g.p;top=py*bh//g.H;bottom=(py+1)*bh//g.H
