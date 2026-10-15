@@ -35,3 +35,13 @@ Emoji sprites include a helmeted worker, alien/bug/bat creatures, ghosts and roc
 E toggles emoji/ASCII at any time; use `python3 burrowburst.py --ascii` to start with the compact ASCII sprites. Linux console or non-UTF-8 sessions default to ASCII. No joined emoji sequences or skin-tone variants are used. Padding counts wide characters instead of assuming one character equals one cell. Terminal fonts and emoji-width tables vary, so automatic detection cannot guarantee the client display: press E if sprites look misplaced or like boxes. Color emoji requires support on the device displaying the SSH session, not a font installed on the Pi. There are no new runtime dependencies.
 
 Test evidence: 18 local unit tests, separate real-PTY emoji/ASCII runs with E/e toggle, resize, pause/restart and uppercase Q restore checks. Host rendering previews use Noto Color Emoji; actual Pi/Mac client fonts may differ. The release passed 18 tests and both emoji/ASCII PTY checks on a real aarch64 Raspberry Pi before publication.
+
+## 1.2.0 custom pixel mode
+
+Custom hand-authored 8x8 sprites: white/blue helmeted digger with pump, red goggle creatures, green dragon-like creatures, ghosts and rocks. No copied game art, no font downloads and no terminal graphics protocol. The green creature is visual only: fire-breathing is still not implemented.
+
+A truecolor terminal (`COLORTERM=truecolor` or `24bit`, or a direct-color TERM) starts in RGB pixel mode, using ANSI colors and `▀` half blocks. A 12x8-cell camera follows the digger, so the sprites have enough pixels at 70x26 and up. At 110x32 each sprite is 8x6 pixels; at larger sizes up to 8x8. The zoom means you cannot see the entire table in pixel mode. E switches to the full-table emoji view, then ASCII; V toggles pixel mode manually if the terminal does not advertise color support. --ascii and --emoji start with the fallback view. Missing truecolor support does not prevent play.
+
+Modern SSH clients often render this well, but SSH alone does not guarantee 24-bit color or Unicode half blocks. If forced pixel mode looks wrong, E restores the fallback. No change to terminal fonts or configuration is made. Plain ASCII is the compatibility route for unsupported clients. Pixel frames are capped by an 80ms input wait to reduce terminal traffic; slow links may still feel sluggish.
+
+Tests: 24 unit tests plus real PTY truecolor, emoji and ASCII controls/resize/quit-restoration tests locally. All 24 unit tests and three display-mode PTY checks passed on a real aarch64 Raspberry Pi before publication.
