@@ -27,3 +27,11 @@ Best score is local at `~/.local/share/burrowburst/best.json`, saved on game ove
 Automated tests cover digging, boundaries, pump range/obstacles/cooldown/pop/decay, lives, paths, falling rocks, stage progression and local records. Interactive terminal tests cover input, pause, resize and clean exit. See release verification for target hardware status.
 
 MIT license, copyright 2026 Greenisus1.
+
+## 1.1.0 visual update
+
+Emoji sprites include a helmeted worker, alien/bug/bat creatures, ghosts and rocks. A 256-color terminal gets solid ochre, plum and red earth layers with dark blue tunnels. Basic-color and monochrome terminals remain supported. Gameplay rules, scores and controls are unchanged.
+
+E toggles emoji/ASCII at any time; use `python3 burrowburst.py --ascii` to start with the compact ASCII sprites. Linux console or non-UTF-8 sessions default to ASCII. No joined emoji sequences or skin-tone variants are used. Padding counts wide characters instead of assuming one character equals one cell. Terminal fonts and emoji-width tables vary, so automatic detection cannot guarantee the client display: press E if sprites look misplaced or like boxes. Color emoji requires support on the device displaying the SSH session, not a font installed on the Pi. There are no new runtime dependencies.
+
+Test evidence: 18 local unit tests, separate real-PTY emoji/ASCII runs with E/e toggle, resize, pause/restart and uppercase Q restore checks. Host rendering previews use Noto Color Emoji; actual Pi/Mac client fonts may differ. The release passed 18 tests and both emoji/ASCII PTY checks on a real aarch64 Raspberry Pi before publication.
