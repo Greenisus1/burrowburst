@@ -50,3 +50,31 @@ class SpriteTests(unittest.TestCase):
  def test_ascii(self):
   self.assertEqual(b.pad_cell('@>',3),'@> ')
 if __name__=='__main__':unittest.main()
+
+class PixelTests(unittest.TestCase):
+ def test_art(self):
+  import pixelart as p
+  for name,rows in p.ART.items():
+   self.assertEqual(len(rows),8)
+   self.assertTrue(all(len(row)==8 for row in rows),name)
+   self.assertTrue(all(c in p.PALETTE for row in rows for c in row))
+ def test_resample(self):
+  import pixelart as p
+  for w,h in ((2,2),(8,8),(7,6)):
+   a=p.sprite('player',w,h);self.assertEqual(len(a),h);self.assertTrue(all(len(r)==w for r in a))
+ def test_camera(self):
+  import pixelart as p
+  self.assertEqual(p.camera((0,0),12,8),(0,0));self.assertEqual(p.camera((31,18),12,8),(20,11))
+ def test_ansi(self):
+  import pixelart as p
+  g=b.Game();text,view=p.frame(g,110,32)
+  self.assertIn('\x1b[38;2;',text);self.assertIn('\x1b[48;2;',text);self.assertTrue(text.endswith('\x1b[0m'))
+  self.assertEqual(view[2:],(12,8))
+ def test_sizes(self):
+  import pixelart as p
+  for w,h in ((70,26),(110,32),(180,60)):
+   for q in ((0,0),(31,18),(16,1)):
+    g=b.Game();g.p=q;self.assertTrue(p.frame(g,w,h)[0])
+ def test_capability(self):
+  import pixelart as p
+  with patch.dict('os.environ',{'COLORTERM':'truecolor'}):self.assertTrue(p.supported())
