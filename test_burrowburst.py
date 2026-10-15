@@ -78,3 +78,27 @@ class PixelTests(unittest.TestCase):
  def test_capability(self):
   import pixelart as p
   with patch.dict('os.environ',{'COLORTERM':'truecolor'}):self.assertTrue(p.supported())
+
+class LayoutTests(unittest.TestCase):
+ def test_first_round(self):
+  g=b.Game();self.assertEqual(sum(e['kind']==1 for e in g.enemies),1);self.assertEqual(len(g.rocks),3)
+ def test_reference_counts(self):
+  import layouts
+  self.assertEqual([(len(d['red']),len(d['green'])) for d in layouts.LAYOUTS],[(3,1),(3,2),(3,2),(3,2),(3,3),(1,4)])
+ def test_valid_positions(self):
+  import layouts
+  for stage in range(1,100):
+   opened,rocks,enemies,start=layouts.build(stage)
+   for x,y in opened:self.assertTrue(0<=x<32 and 0<=y<19)
+   self.assertIn(start,opened)
+   self.assertTrue(all(p in opened for p,k in enemies))
+   self.assertFalse(set(rocks)&{p for p,k in enemies})
+ def test_flower_count(self):
+  import layouts
+  self.assertEqual(layouts.flowers(3,110).count('✿'),3)
+  self.assertIn('+',layouts.flowers(100,70))
+ def test_clear_flower(self):
+  g=b.Game();g.enemies=[];g.tick(.01);self.assertEqual(g.level-1,1)
+ def test_repeat_labeled(self):
+  import layouts
+  self.assertIn('Adapted repeat',layouts.label(7))
